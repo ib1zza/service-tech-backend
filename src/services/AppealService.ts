@@ -62,31 +62,38 @@ export class AppealService {
     return this.appealRepo.save(appeal);
   }
 
-  async closeAppeal(appealId: number, staffId: number, description: string) {
+  async closeAppeal(
+    appealId: number,
+    staffId: number,
+    description: string,
+    fio_staff: string
+  ) {
     const staff = await this.staffRepo.findOne({ where: { id: staffId } });
     if (!staff) throw new Error("Staff not found");
 
     const appeal = await this.appealRepo.closeAppeal(
       appealId,
       staff,
-      description
+      description,
+      fio_staff
     );
     const client = await this.clientRepo.findOne({
       where: { id: appeal.company_name_id.id },
+      relations: ["appeals"],
     });
 
-    if (client) {
-      await sendTelegramNotification(
-        `Заявка №${appeal.id} закрыта`,
-        client.phone_number_client
-      );
-    }
+    // if (client) {
+    //   await sendTelegramNotification(
+    //     `Заявка №${appeal.id} закрыта`,
+    //     client.phone_number_client
+    //   );
+    // }
 
-    // Генерация отчета при закрытии заявки
-    if (appeal.company_name_id) {
-      const appeals = client!.appeals;
-      await excelExportService.generateClientReport(client!, appeals);
-    }
+    // // Генерация отчета при закрытии заявки
+    // if (appeal.company_name_id) {
+    //   const appeals = client!.appeals;
+    //   await excelExportService.generateClientReport(client!, appeals);
+    // }
 
     return appeal;
   }

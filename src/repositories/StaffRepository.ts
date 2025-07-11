@@ -37,4 +37,21 @@ export class StaffRepository extends Repository<Staff> {
       relations: ["opened_appeals", "closed_appeals"],
     });
   }
+
+  async removeStaff(staffId: number): Promise<void> {
+    await this.delete(staffId);
+  }
+
+  async editStaff(
+    staffId: number,
+    fio?: string,
+    login?: string,
+    password?: string
+  ): Promise<void> {
+    const updatedData: Record<string, string> = {};
+    if (fio) updatedData["fio_staff"] = fio;
+    if (login) updatedData["login_staff"] = login;
+    if (password) updatedData["password"] = password;
+    await this.update(staffId, updatedData);
+  }
 }

@@ -60,7 +60,7 @@ export class AppealRepository extends Repository<Appeal> {
     if (!status) return [];
     return this.find({
       where: { status: { id: status.id } },
-      relations: ["company_name_id", "fio_staff_close_id"],
+      relations: ["company_name_id", "fio_staff_close_id", "fio_staff_open_id"],
     });
   }
 
@@ -103,9 +103,13 @@ export class AppealRepository extends Repository<Appeal> {
   async closeAppeal(
     id: number,
     staff: Staff,
-    description: string
+    description: string,
+    fio_staff: string
   ): Promise<Appeal> {
-    const appeal = await this.findOne({ where: { id } });
+    const appeal = await this.findOne({
+      where: { id },
+      relations: ["status", "company_name_id"],
+    });
     if (!appeal) throw new Error("Appeal not found");
 
     const status = await this.manager.findOne(AppealStatus, {
@@ -115,6 +119,7 @@ export class AppealRepository extends Repository<Appeal> {
 
     appeal.status = status;
     appeal.fio_staff_close_id = staff;
+    appeal.fio_staff = fio_staff;
     appeal.date_close = new Date();
     appeal.appeal_desc = description;
 

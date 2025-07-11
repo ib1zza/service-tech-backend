@@ -176,16 +176,18 @@ export const appealRouter = (appealService: AppealService) => {
     async (req: Request, res: Response) => {
       try {
         const appealId = parseInt(req.params.id);
-        const { description } = req.body;
+        const { description, fio_staff } = req.body;
         const appeal = await appealService.closeAppeal(
           appealId,
           req.currentUser!.id,
-          description
+          description,
+          fio_staff
         );
         res.json(appeal);
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
+        console.log(error);
         res.status(400).json({ error: message });
       }
     }
