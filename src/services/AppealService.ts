@@ -2,21 +2,28 @@ import { AppealRepository } from "../repositories/AppealRepository";
 import { AppealStatusRepository } from "../repositories/AppealStatusRepository";
 import { ClientRepository } from "../repositories/ClientRepository";
 import { StaffRepository } from "../repositories/StaffRepository";
-import { sendTelegramNotification } from "./TelegramService";
 import { DataSource } from "typeorm";
 import { excelExportService } from "./excel-export.service";
+import { TelegramService } from "./TelegramService";
+import { AdminRepository } from "../repositories/AdminRepository";
 
 export class AppealService {
   private appealRepo: AppealRepository;
   private statusRepo: AppealStatusRepository;
   private clientRepo: ClientRepository;
   private staffRepo: StaffRepository;
+  private adminRepo: AdminRepository;
 
-  constructor(dataSource: DataSource) {
+  constructor(
+    dataSource: DataSource,
+    private telegramService: TelegramService
+  ) {
     this.appealRepo = new AppealRepository(dataSource);
     this.statusRepo = new AppealStatusRepository(dataSource);
     this.clientRepo = new ClientRepository(dataSource);
     this.staffRepo = new StaffRepository(dataSource);
+    this.adminRepo = new AdminRepository(dataSource);
+    this.telegramService = telegramService;
   }
 
   async createAppeal(
@@ -39,7 +46,12 @@ export class AppealService {
       client
     );
 
-    await sendTelegramNotification(
+    const admin = await this.adminRepo.getOneAdmin();
+    if (!admin) throw new Error("Admin not found");
+
+    console.log("admin", admin, admin.phone_number_admin);
+    await this.telegramService.sendMessageToAdmin(
+      admin.phone_number_admin,
       `Новая заявка №${appeal.id} от ${client.company_name}`
     );
     return appeal;
@@ -70,7 +82,8 @@ export class AppealService {
   ) {
     const staff = await this.staffRepo.findOne({ where: { id: staffId } });
     if (!staff) throw new Error("Staff not found");
-
+    const closedStatus = await this.statusRepo.findByStatusName("completed");
+    if (!closedStatus) throw new Error("Status not found");
     const appeal = await this.appealRepo.closeAppeal(
       appealId,
       staff,
@@ -82,28 +95,30 @@ export class AppealService {
       relations: ["appeals"],
     });
 
-    // if (client) {
-    //   await sendTelegramNotification(
-    //     `Заявка №${appeal.id} закрыта`,
-    //     client.phone_number_client
-    //   );
-    // }
+    const appeals = await this.appealRepo.find({
+      where: { company_name_id: appeal.company_name_id, status: closedStatus },
+      relations: [
+        "company_name_id",
+        "status",
+        "fio_staff_close_id",
+        "fio_staff_open_id",
+      ],
+    });
 
+    if (!client) throw new Error("Client not found");
+
+    await this.telegramService.sendMessageToClient(
+      client.phone_number_client,
+      `Закрыта заявка №${appeal.id} от ${client.company_name}`
+    );
     // // Генерация отчета при закрытии заявки
-    // if (appeal.company_name_id) {
-    //   const appeals = client!.appeals;
-    //   await excelExportService.generateClientReport(client!, appeals);
-    // }
+    if (appeal.company_name_id) {
+      await excelExportService.getOrCreateReport(client, appeals);
+    }
 
     return appeal;
   }
 
-  //    const appeal = await appealService.cancelAppeal(
-  //     appealId,
-  //     req.currentUser!.id,
-  //     description
-  //   );
-  //   При клике кнопки ‘Отменить заявку’, на сервисную часть ПО приходит новая заявка с ‘Кратким описанием неисправности’: “Отмена заявки от Дата чч.мм.гггг Время час:мин”.
   async cancelAppeal(appealId: number, userId: number) {
     const user = await this.clientRepo.findOne({ where: { id: userId } });
     if (!user) throw new Error("User not found");

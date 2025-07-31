@@ -3,14 +3,23 @@ import { RoleRepository } from "../repositories/RoleRepository";
 import bcrypt from "bcrypt";
 import { DataSource } from "typeorm";
 import { Client } from "../entities/Client";
+import { TelegramService } from "./TelegramService";
 
 export class ClientService {
   private clientRepo: ClientRepository;
   private roleRepo: RoleRepository;
-
-  constructor(dataSource: DataSource) {
+  private telegramService: TelegramService;
+  constructor(dataSource: DataSource, telegramService: TelegramService) {
     this.clientRepo = new ClientRepository(dataSource);
     this.roleRepo = new RoleRepository(dataSource);
+    this.telegramService = telegramService; // <-- Добавляем TelegramService
+  }
+
+  async sendTelegramNotification(
+    phone: string,
+    message: string
+  ): Promise<boolean> {
+    return this.telegramService.sendMessageToClient(phone, message);
   }
 
   async createClient(

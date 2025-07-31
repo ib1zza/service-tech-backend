@@ -28,6 +28,9 @@ export class Client {
   @Column({ length: 50 })
   company_name: string;
 
+  @Column({ length: 200, nullable: true })
+  telegram_id: string;
+
   @ManyToOne(() => Role, (role) => role.clients)
   role: Role;
 

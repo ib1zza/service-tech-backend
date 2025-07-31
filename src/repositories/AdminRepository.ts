@@ -33,4 +33,19 @@ export class AdminRepository extends Repository<Admin> {
     });
     return this.save(admin);
   }
+
+  async getAdminByPhone(phone: string): Promise<Admin | null> {
+    return this.findOne({
+      where: { phone_number_admin: phone },
+      relations: ["role"],
+    });
+  }
+
+  async getOneAdmin(): Promise<Admin | null> {
+    return this.findOne({
+      where: {},
+      relations: ["role"],
+      order: { id: "ASC" },
+    });
+  }
 }
