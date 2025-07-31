@@ -7,6 +7,9 @@ import { excelExportService } from "./excel-export.service";
 import { TelegramService } from "./TelegramService";
 import { AdminRepository } from "../repositories/AdminRepository";
 
+/**
+ * Сервис для работы с заявками
+ */
 export class AppealService {
   private appealRepo: AppealRepository;
   private statusRepo: AppealStatusRepository;
@@ -18,6 +21,7 @@ export class AppealService {
     dataSource: DataSource,
     private telegramService: TelegramService
   ) {
+    // Инициализация репозиториев
     this.appealRepo = new AppealRepository(dataSource);
     this.statusRepo = new AppealStatusRepository(dataSource);
     this.clientRepo = new ClientRepository(dataSource);
@@ -26,18 +30,24 @@ export class AppealService {
     this.telegramService = telegramService;
   }
 
+  /**
+   * Создание новой заявки
+   */
   async createAppeal(
     mechanism: string,
     problem: string,
     fioClient: string,
     clientId: number
   ) {
+    // Проверка существования клиента
     const client = await this.clientRepo.findOne({ where: { id: clientId } });
-    if (!client) throw new Error("Client not found");
+    if (!client) throw new Error("Клиент не найден");
 
+    // Получение статуса "Новая"
     const status = await this.statusRepo.findByStatusName("new");
-    if (!status) throw new Error("Status not found");
+    if (!status) throw new Error("Статус не найден");
 
+    // Создание заявки
     const appeal = await this.appealRepo.createAppeal(
       mechanism,
       problem,
@@ -46,27 +56,35 @@ export class AppealService {
       client
     );
 
+    // Уведомление администратора
     const admin = await this.adminRepo.getOneAdmin();
-    if (!admin) throw new Error("Admin not found");
+    if (!admin) throw new Error("Администратор не найден");
 
-    console.log("admin", admin, admin.phone_number_admin);
     await this.telegramService.sendMessageToAdmin(
       admin.phone_number_admin,
       `Новая заявка №${appeal.id} от ${client.company_name}`
     );
+
     return appeal;
   }
 
+  /**
+   * Взятие заявки в работу
+   */
   async takeAppealToWork(appealId: number, staffId: number) {
+    // Проверка существования заявки
     const appeal = await this.appealRepo.findOne({ where: { id: appealId } });
-    if (!appeal) throw new Error("Appeal not found");
+    if (!appeal) throw new Error("Заявка не найдена");
 
+    // Проверка существования сотрудника
     const staff = await this.staffRepo.findOne({ where: { id: staffId } });
-    if (!staff) throw new Error("Staff not found");
+    if (!staff) throw new Error("Сотрудник не найден");
 
+    // Получение статуса "В работе"
     const status = await this.statusRepo.findByStatusName("in_progress");
-    if (!status) throw new Error("Status not found");
+    if (!status) throw new Error("Статус не найден");
 
+    // Обновление заявки
     appeal.status = status;
     appeal.fio_staff_open_id = staff;
     appeal.fio_staff = staff.fio_staff;
@@ -74,62 +92,84 @@ export class AppealService {
     return this.appealRepo.save(appeal);
   }
 
+  /**
+   * Закрытие заявки
+   */
   async closeAppeal(
     appealId: number,
     staffId: number,
     description: string,
     fio_staff: string
   ) {
+    // Проверка существования сотрудника
     const staff = await this.staffRepo.findOne({ where: { id: staffId } });
-    if (!staff) throw new Error("Staff not found");
+    if (!staff) throw new Error("Сотрудник не найден");
+
+    // Получение статуса "Завершено"
     const closedStatus = await this.statusRepo.findByStatusName("completed");
-    if (!closedStatus) throw new Error("Status not found");
+    if (!closedStatus) throw new Error("Статус не найден");
+
+    // Закрытие заявки
     const appeal = await this.appealRepo.closeAppeal(
       appealId,
       staff,
       description,
       fio_staff
     );
+
+    // Получение клиента для уведомления
     const client = await this.clientRepo.findOne({
       where: { id: appeal.company_name_id.id },
       relations: ["appeals"],
     });
 
-    const appeals = await this.appealRepo.find({
-      where: { company_name_id: appeal.company_name_id, status: closedStatus },
-      relations: [
-        "company_name_id",
-        "status",
-        "fio_staff_close_id",
-        "fio_staff_open_id",
-      ],
-    });
+    if (!client) throw new Error("Клиент не найден");
 
-    if (!client) throw new Error("Client not found");
-
+    // Уведомление клиента
     await this.telegramService.sendMessageToClient(
       client.phone_number_client,
       `Закрыта заявка №${appeal.id} от ${client.company_name}`
     );
-    // // Генерация отчета при закрытии заявки
+
+    // Генерация отчета
     if (appeal.company_name_id) {
+      const appeals = await this.appealRepo.find({
+        where: {
+          company_name_id: appeal.company_name_id,
+          status: closedStatus,
+        },
+        relations: [
+          "company_name_id",
+          "status",
+          "fio_staff_close_id",
+          "fio_staff_open_id",
+        ],
+      });
       await excelExportService.getOrCreateReport(client, appeals);
     }
 
     return appeal;
   }
 
+  /**
+   * Отмена заявки
+   */
   async cancelAppeal(appealId: number, userId: number) {
+    // Проверка существования пользователя
     const user = await this.clientRepo.findOne({ where: { id: userId } });
-    if (!user) throw new Error("User not found");
+    if (!user) throw new Error("Пользователь не найден");
+
+    // Получение статусов
     const cancelStatus = await this.statusRepo.findByStatusName("cancel");
     const completedStatus = await this.statusRepo.findByStatusName("completed");
 
+    // Поиск исходной заявки
     const prevAppeal = await this.appealRepo.findOne({
       where: { id: appealId },
     });
-    if (!prevAppeal) throw new Error("Appeal not found");
+    if (!prevAppeal) throw new Error("Заявка не найдена");
 
+    // Создание заявки на отмену
     const newAppeal = await this.appealRepo.createAppeal(
       "Отмена заявки",
       "Отмена заявки от " + prevAppeal.date_start.toLocaleString("ru"),
@@ -138,6 +178,7 @@ export class AppealService {
       user
     );
 
+    // Обновление исходной заявки
     prevAppeal.status = completedStatus!;
     prevAppeal.date_close = new Date();
     prevAppeal.appeal_desc =
@@ -148,6 +189,7 @@ export class AppealService {
     return prevAppeal;
   }
 
+  // Методы получения заявок по статусам
   async getNewAppeals() {
     return this.appealRepo.findNewAppeals();
   }

@@ -6,10 +6,11 @@ import { requireRole } from "../middlewares/require-role";
 import { body } from "express-validator";
 import { validateRequest } from "../middlewares/validate-request";
 
+// Роутер для администраторов
 export const adminRouter = (adminService: AdminService) => {
   const router = Router();
 
-  // Правильное применение middleware
+  // Применение middleware для проверки аутентификации и роли
   router.use((req: Request, res: Response, next: NextFunction) => {
     currentUser(req, res, (err?: any) => {
       if (err) return next(err);
@@ -20,9 +21,11 @@ export const adminRouter = (adminService: AdminService) => {
     });
   });
 
+  // Создание нового администратора
   router.post(
     "/",
     [
+      // Валидация входных данных
       body("login")
         .trim()
         .isLength({ min: 2, max: 10 })
@@ -58,9 +61,11 @@ export const adminRouter = (adminService: AdminService) => {
     }
   );
 
+  // Обновление учетных данных администратора
   router.put(
     "/credentials",
     [
+      // Валидация обновляемых данных
       body("newLogin").trim().isLength({ min: 2, max: 10 }).optional(),
       body("newPassword").trim().isLength({ min: 2, max: 10 }).optional(),
       body("newPhone").trim().isLength({ min: 9, max: 13 }).optional(),

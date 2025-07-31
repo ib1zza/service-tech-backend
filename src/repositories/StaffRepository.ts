@@ -7,14 +7,17 @@ export class StaffRepository extends Repository<Staff> {
     super(Staff, dataSource.createEntityManager());
   }
 
+  // Поиск сотрудника по логину с загрузкой роли
   async findByLogin(login: string): Promise<Staff | null> {
     return this.findOne({ where: { login_staff: login }, relations: ["role"] });
   }
 
+  // Поиск сотрудника по ID с загрузкой роли
   async findByIdWithRole(id: number): Promise<Staff | null> {
     return this.findOne({ where: { id }, relations: ["role"] });
   }
 
+  // Создание нового сотрудника
   async createStaff(
     login: string,
     password: string,
@@ -32,16 +35,19 @@ export class StaffRepository extends Repository<Staff> {
     return this.save(staff);
   }
 
+  // Получение всех сотрудников с их обращениями
   async getStaffWithAppeals(): Promise<Staff[]> {
     return this.find({
       relations: ["opened_appeals", "closed_appeals"],
     });
   }
 
+  // Удаление сотрудника по ID
   async removeStaff(staffId: number): Promise<void> {
     await this.delete(staffId);
   }
 
+  // Редактирование данных сотрудника
   async editStaff(
     staffId: number,
     fio?: string,

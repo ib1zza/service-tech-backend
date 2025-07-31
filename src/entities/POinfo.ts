@@ -1,10 +1,13 @@
 import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
 
+// Сущность для таблицы POinfo (вероятно, справочная информация)
 @Entity("POinfo")
 export class POinfo {
-    @PrimaryGeneratedColumn()
-    id: number;
+  // Автоинкрементный идентификатор
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column({ length: 255 })
-    TextInfo: string;
+  // Текстовая информация (макс. 255 символов)
+  @Column({ length: 255 })
+  TextInfo: string;
 }

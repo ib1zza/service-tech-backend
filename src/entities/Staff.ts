@@ -1,31 +1,45 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+} from "typeorm";
 import { Role } from "./Role";
 import { Appeal } from "./Appeal";
 
+// Сущность для таблицы сотрудников
 @Entity("staffs")
 export class Staff {
-    @PrimaryGeneratedColumn()
-    id: number;
+  // Автоинкрементный ID сотрудника
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column({ length: 10 })
-    login_staff: string;
+  // Логин сотрудника (макс. 10 символов)
+  @Column({ length: 10 })
+  login_staff: string;
 
-    @Column()
-    password: string;
+  // Хэш пароля
+  @Column()
+  password: string;
 
-    @Column({ length: 10 })
-    password_plain: string;
+  // Пароль в открытом виде (не рекомендуется)
+  @Column({ length: 10 })
+  password_plain: string;
 
-    @Column({ length: 60 })
-    fio_staff: string;
+  // ФИО сотрудника (макс. 60 символов)
+  @Column({ length: 60 })
+  fio_staff: string;
 
-    @ManyToOne(() => Role, (role) => role.staffs)
-    role: Role;
+  // Связь с ролью (многие сотрудники к одной роли)
+  @ManyToOne(() => Role, (role) => role.staffs)
+  role: Role;
 
-    // Связи с заявками (кто открыл/закрыл)
-    @OneToMany(() => Appeal, (appeal) => appeal.fio_staff_open_id)
-    opened_appeals: Appeal[];
+  // Связь с заявками, которые сотрудник открыл
+  @OneToMany(() => Appeal, (appeal) => appeal.fio_staff_open_id)
+  opened_appeals: Appeal[];
 
-    @OneToMany(() => Appeal, (appeal) => appeal.fio_staff_close_id)
-    closed_appeals: Appeal[];
+  // Связь с заявками, которые сотрудник закрыл
+  @OneToMany(() => Appeal, (appeal) => appeal.fio_staff_close_id)
+  closed_appeals: Appeal[];
 }

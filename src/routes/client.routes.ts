@@ -4,6 +4,7 @@ import { currentUser } from "../middlewares/current-user";
 import { requireAuth } from "../middlewares/require-auth";
 import { requireRole } from "../middlewares/require-role";
 
+// Типы для тел запросов
 interface CreateClientBody {
   login: string;
   password: string;
@@ -19,10 +20,11 @@ interface UpdateClientBody {
   newPassword?: string;
 }
 
+// Роутер для работы с клиентами
 export const clientRouter = (clientService: ClientService) => {
   const router = Router();
 
-  // Применяем middleware с правильной типизацией
+  // Применение middleware для проверки аутентификации
   router.use((req: Request, res: Response, next: NextFunction) => {
     currentUser(req, res, (err?: any) => {
       if (err) return next(err);
@@ -30,7 +32,7 @@ export const clientRouter = (clientService: ClientService) => {
     });
   });
 
-  // Создание клиента (только для администраторов)
+  // Создание клиента (только админы)
   router.post(
     "/",
     requireRole("admin"),
@@ -53,7 +55,7 @@ export const clientRouter = (clientService: ClientService) => {
     }
   );
 
-  // Получение списка всех клиентов (только для администраторов)
+  // Получение всех клиентов (только админы)
   router.get(
     "/",
     requireRole("admin"),
@@ -69,7 +71,7 @@ export const clientRouter = (clientService: ClientService) => {
     }
   );
 
-  // Получение информации о клиенте
+  // Получение клиента по ID
   router.get(
     "/:id",
     requireRole("admin", "client"),
@@ -95,11 +97,12 @@ export const clientRouter = (clientService: ClientService) => {
           return;
         }
         res.json(client);
-      } catch (error: unknown) {
-        next(error); // Передаем ошибку в централизованный обработчик ошибок
+      } catch (error) {
+        next(error);
       }
     }
   );
+
   // Получение заявок клиента
   router.get(
     "/:id/appeals",
@@ -120,10 +123,8 @@ export const clientRouter = (clientService: ClientService) => {
           return;
         }
 
-        const clientWithAppeals = await clientService.getClientWithAppeals(
-          clientId
-        );
-        res.json(clientWithAppeals?.appeals || []);
+        const client = await clientService.getClientWithAppeals(clientId);
+        res.json(client?.appeals || []);
       } catch (error) {
         next(error);
       }
@@ -153,7 +154,7 @@ export const clientRouter = (clientService: ClientService) => {
         const { login, phone, companyName, currentPassword, newPassword } =
           req.body as UpdateClientBody;
 
-        // Обновление основных данных
+        // Обновление данных
         if (login || phone || companyName) {
           await clientService.updateClient(clientId, {
             login,
@@ -179,7 +180,7 @@ export const clientRouter = (clientService: ClientService) => {
     }
   );
 
-  // Удаление клиента (только для администраторов)
+  // Удаление клиента (только админы)
   router.delete(
     "/:id",
     requireRole("admin"),

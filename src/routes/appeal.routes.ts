@@ -3,54 +3,11 @@ import { AppealService } from "../services/AppealService";
 import { currentUser } from "../middlewares/current-user";
 import { requireAuth } from "../middlewares/require-auth";
 import { requireRole } from "../middlewares/require-role";
-/**
- * @swagger
- * tags:
- *   name: Appeals
- *   description: Управление заявками
- */
 
-/**
- * @swagger
- * /api/appeals:
- *   post:
- *     summary: Создание новой заявки
- *     tags: [Appeals]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Appeal'
- *     responses:
- *       201:
- *         description: Заявка создана
- *       400:
- *         description: Неверные данные
- */
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     Appeal:
- *       type: object
- *       required:
- *         - mechanism
- *         - problem
- *       properties:
- *         mechanism:
- *           type: string
- *           example: Принтер
- *         problem:
- *           type: string
- *           example: Не печатает
- */
 export const appealRouter = (appealService: AppealService) => {
   const router = Router();
 
+  // Получение новых заявок
   router.get(
     "/new",
     currentUser,
@@ -76,6 +33,7 @@ export const appealRouter = (appealService: AppealService) => {
     }
   );
 
+  // Получение заявок в работе
   router.get(
     "/in-progress",
     currentUser,
@@ -100,6 +58,7 @@ export const appealRouter = (appealService: AppealService) => {
     }
   );
 
+  // Получение завершенных заявок
   router.get(
     "/completed",
     currentUser,
@@ -124,6 +83,7 @@ export const appealRouter = (appealService: AppealService) => {
     }
   );
 
+  // Создание новой заявки
   router.post(
     "/",
     currentUser,
@@ -147,6 +107,7 @@ export const appealRouter = (appealService: AppealService) => {
     }
   );
 
+  // Взятие заявки в работу
   router.patch(
     "/:id/take",
     currentUser,
@@ -168,6 +129,7 @@ export const appealRouter = (appealService: AppealService) => {
     }
   );
 
+  // Закрытие заявки
   router.patch(
     "/:id/close",
     currentUser,
@@ -193,8 +155,7 @@ export const appealRouter = (appealService: AppealService) => {
     }
   );
 
-  //   При клике кнопки ‘Отменить заявку’, на сервисную часть ПО приходит новая заявка с ‘Кратким описанием неисправности’: “Отмена заявки от Дата чч.мм.гггг Время час:мин”.
-  //   cancel
+  // Отмена заявки
   router.patch(
     "/:id/cancel",
     currentUser,
